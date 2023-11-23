@@ -23,19 +23,6 @@ namespace GUIdition.Genetics
             }
 
             gene.ObjectValue = _Random.Next(0, 3);
-
-            /*switch (gene.GeneType)
-            {
-                case GeneType.Binary:
-                    gene.ObjectValue = Ran
-                    break;
-                case GeneType.Real:
-                    gene.ObjectValue = (double)gene.ObjectValue * -1.0;
-                    break;
-                case GeneType.Integer:
-                    gene.ObjectValue = (int)gene.ObjectValue * -1;
-                    break;
-            }*/
         }
     }
 }

@@ -15,7 +15,9 @@
 
     public enum OptimizeFor
     {
+        Earnings,
         Score,
-        CO2
+        CO2,
+        Footfall
     }
 }

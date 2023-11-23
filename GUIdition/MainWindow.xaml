@@ -10,7 +10,7 @@
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition/>
-            <ColumnDefinition MinWidth="200" Width="100"></ColumnDefinition>
+            <ColumnDefinition MinWidth="200" Width="200"></ColumnDefinition>
         </Grid.ColumnDefinitions>
 
         <lvc:CartesianChart Grid.Column="0" Series="{Binding SeriesCollection}">
@@ -31,7 +31,7 @@
             <Button Margin="10" Click="ButtonReset_OnClick">Reset</Button>
             <Button Margin="10" Click="ButtonOptimize_OnClick">Optimize</Button>
             <Label>Maps</Label>
-            <ComboBox Name="ComboBoxSelectedKarta" SelectedItem="{Binding KartorSelectedItem}"/>
+            <ComboBox Name="ComboBoxSelectedKarta" Width="100" SelectedItem="{Binding KartorSelectedItem}"/>
             <Label>Optimize for</Label>
             <ComboBox Name="ComboBoxSelectedOptimize" SelectedItem="{Binding OptimizeForSelectedItem}"/>
             <Label FontWeight="Bold" HorizontalContentAlignment="Center" Content="{Binding MaxScoreText}"/>

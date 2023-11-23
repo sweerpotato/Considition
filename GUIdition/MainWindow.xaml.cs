@@ -96,7 +96,7 @@ namespace GUIdition
         private static MapData? _CurrentMapData = null;
         private static CompleteMapData _CompleteMapData;
         private static Chromosome BestChromosome;
-        private const int POPULATION_SIZE = 200;//200;
+        private const int POPULATION_SIZE = 200;
         private static RandomMutationOperator _RandomMutate = new(0.01d);
         //private static ReverseMutationOperator _ReverseMutate = new(0.01d);
         private static SwapMutate _SwapMutate = new(0.1d);
@@ -142,15 +142,23 @@ namespace GUIdition
         {
             ButtonRun.IsEnabled = false;
 
-            _CurrentMapData = await Core.GetMapDataAsync(_CurrentMap);
-            _CompleteMapData = await Core.GetCompleteMapDataAsync(_CurrentMap);
-
-            if (_CurrentMapData == null)
+            try
             {
-                throw new Exception("No mapdata");
+                _CurrentMapData = await Core.GetMapDataAsync(_CurrentMap);
+                _CompleteMapData = await Core.GetCompleteMapDataAsync(_CurrentMap);
+
+                if (_CurrentMapData == null)
+                {
+                    throw new Exception("No mapdata");
+                }
+            }
+            catch
+            {
+                ButtonRun.IsEnabled = true;
+                return;
             }
 
-            List<Gene> firstGeneration = await Generations.GetFirstGenerationGenes(_CurrentMap);
+            List<Gene> firstGeneration = Generations.GetFirstGenerationGenes(_CurrentMap).Result;
 
             await Task.Run(() =>
             {
@@ -159,18 +167,8 @@ namespace GUIdition
                     return;
                 }
 
-                /*Population population = new();
-                Elite elite = new(10);
-                Crossover crossover = new(0.85d, false, CrossoverType.DoublePoint, ReplacementMethod.GenerationalReplacement);
-                BinaryMutate binaryMutate = new(0.01d, false);
-                SwapMutate swapMutate = new(0.1d);
-
-                highscore på gbg
-                 * 
-                 */
-
                 Population population = new(0, 0, false, true, ParentSelectionMethod.FitnessProportionateSelection, true);
-                Elite elite = new(8); // 8 bra
+                Elite elite = new(8);
 
                 Random random = new();
 
@@ -178,32 +176,16 @@ namespace GUIdition
                 {
                     Chromosome chromosome = new();
 
-                    //276 = antalet apparater * antalet locations * 3 (bitar)
-                    /*for (int j = 0; j != 2 * _CurrentMapData.Locations.Count * 3; ++j)
-                    {
-                        if (i % 3 == 0)
-                        {
-                            chromosome.Genes.Add(new(j % 2 == 0));
-                        }
-                        else if (i % 2 == 0)
-                        {
-                            chromosome.Genes.Add(new(true));
-                        }
-                        else
-                        {
-                            chromosome.Genes.Add(new(false));
-                        }
-                    }*/
-
-                    /*for (int j = 0; j != 2 * _CurrentMapData.Locations.Count; ++j)
+                    for (int j = 0; j != 2 * _CurrentMapData.Locations.Count; ++j)
                     {
                         chromosome.Genes.Add(new(random.Next(0, 3)));
-                    }*/
+                        //chromosome.Genes.Add(new(1));
+                    }
                     
-                    foreach (Gene gene in firstGeneration)
+                    /*foreach (Gene gene in firstGeneration)
                     {
                         chromosome.Genes.Add(gene);
-                    }
+                    }*/
                     
                     population.Solutions.Add(chromosome);
                 }
@@ -258,13 +240,6 @@ namespace GUIdition
 
         public static double CalculateFitness(Chromosome chromosome)
         {
-            //Splitta genen i två. Högsta värdet med tre bitar är 7
-            //000|000
-            //^ ena värdet
-            //    ^andra värdet
-            //List<string> binaryStrings = new(SplitBinaryString(chromosome.ToBinaryString(), 3));
-            //Debug.WriteLine(String.Join(" ", binaryStrings));
-            //List<int> convertedBinaryStrings = binaryStrings.Select(str => Convert.ToInt32(str, 2)).ToList();
             SolutionConfiguration config = new(_CurrentMap, new Dictionary<string, PlacedLocations>());
 
             if (_CurrentMapData == null)
@@ -277,8 +252,6 @@ namespace GUIdition
             //Skapa en lösning att värdera
             foreach (KeyValuePair<string, StoreLocation> locationKeyPair in _CurrentMapData.Locations)
             {
-                /*int binaryValue1 = convertedBinaryStrings[index];
-                int binaryValue2 = convertedBinaryStrings[index + 1];*/
                 int binaryValue1 = (int)chromosome.Genes[index].ObjectValue;
                 int binaryValue2 = (int)chromosome.Genes[index + 1].ObjectValue;
 
@@ -289,16 +262,6 @@ namespace GUIdition
                         Freestyle3100Count = System.Math.Abs(binaryValue1),
                         Freestyle9100Count = System.Math.Abs(binaryValue2)
                     });
-                }
-                else
-                {
-                    //chromosome.Genes[index] = new Gene(1);
-                    //TODO TA BORT ELSE
-                    /*config.Locations.Add(locationKeyPair.Key, new PlacedLocations()
-                    {
-                        Freestyle3100Count = 1,
-                        Freestyle9100Count = 0
-                    });*/
                 }
 
                 index++;
@@ -329,16 +292,24 @@ namespace GUIdition
             }
 
             int fitnessDivisor = GetFitnessDivisor(_CurrentMap);
-            double fitnessPunishment = (fitnessDivisor * 4d) / _CurrentMapData.Locations.Count; //(fitnessDivisor * 2) / _CurrentMapData.Locations.Count;
+            double fitnessPunishment = (fitnessDivisor * 2d) / _CurrentMapData.Locations.Count;
             int numberOfNonProfitableLocations = result.Locations.Where(pair => !pair.Value.IsProfitable).Count();
             int numberOfNonCO2SavingLocations = result.Locations.Where(pair => !pair.Value.IsCo2Saving).Count();
+            double fitness;
 
             //Ändra efter vilken optimering som ska exekvera
-            double fitness = (GetOptimizeForResult(result.GameScore) - (numberOfNonProfitableLocations * fitnessPunishment) - (numberOfNonCO2SavingLocations * fitnessPunishment)) / GetFitnessDivisor(_CurrentMap);
-            //double fitness = GetOptimizeForResult(result.GameScore) / fitnessDivisor;
-            //double fitness = result.GameScore.TotalFootfall / fitnessDivisor;
-            //double fitness = result.GameScore.Earnings;
-            //double fitness = result.GameScore.KgCo2Savings / GetFitnessDivisor(_CurrentMap);
+            switch (_OptimizeFor)
+            {
+                case OptimizeFor.Score:
+                    fitness = (GetOptimizeForResult(result.GameScore) - (numberOfNonProfitableLocations * fitnessPunishment) - (numberOfNonCO2SavingLocations * fitnessPunishment)) / GetFitnessDivisor(_CurrentMap);
+                    break;
+                case OptimizeFor.Footfall:
+                    fitness = GetOptimizeForResult(result.GameScore);
+                    break;
+                default:
+                    fitness = GetOptimizeForResult(result.GameScore) / GetFitnessDivisor(_CurrentMap);
+                    break;
+            }
 
             if (fitness > 1)
             {
@@ -350,7 +321,6 @@ namespace GUIdition
             }
             
             return fitness;
-            //return (result.GameScore.Total - (numberOfNonProfitableLocations * fitnessModifier)) / GetFitnessDivisor(_CurrentMap);
         }
 
         private static int GetFitnessDivisor(Maps map)
@@ -358,25 +328,25 @@ namespace GUIdition
             switch (map)
             {
                 case Maps.Stockholm:
-                    break;
+                    return 10000;
                 case Maps.Goteborg:
                     return 6200;
                 case Maps.Malmo:
-                    break;
+                    return 4766;
                 case Maps.Uppsala:
                     return 2450;
                 case Maps.Vasteras:
                     return 1500;
                 case Maps.Orebro:
-                    break;
+                    return 1337;
                 case Maps.London:
-                    break;
+                    return 32000;
                 case Maps.Linkoping:
                     return 700;
                 case Maps.Berlin:
-                    break;
+                    return 61000;
             }
-            return 1000000;
+            return 100000;
         }
 
         private static double GetOptimizeForHighscore()
@@ -384,6 +354,14 @@ namespace GUIdition
             if (_OptimizeFor == OptimizeFor.Score)
             {
                 return HighScore.GameScore.Total;
+            }
+            else if (_OptimizeFor == OptimizeFor.Earnings)
+            {
+                return HighScore.GameScore.Earnings;
+            }
+            else if (_OptimizeFor == OptimizeFor.Footfall)
+            {
+                return HighScore.GameScore.TotalFootfall;
             }
             else if (_OptimizeFor == OptimizeFor.CO2)
             {
@@ -398,6 +376,14 @@ namespace GUIdition
             if (_OptimizeFor == OptimizeFor.Score)
             {
                 return score.Total;
+            }
+            else if (_OptimizeFor == OptimizeFor.Earnings)
+            {
+                return HighScore.GameScore.Earnings;
+            }
+            else if (_OptimizeFor == OptimizeFor.Footfall)
+            {
+                return HighScore.GameScore.TotalFootfall;
             }
             else if (_OptimizeFor == OptimizeFor.CO2)
             {
@@ -423,10 +409,10 @@ namespace GUIdition
             MaxScoreText = HighScore.ToString();
 
             //_RandomMutate.MutationProbability = System.Math.Min(1d - avgFitness, 0.01d);
-            //_SwapMutate.MutationProbability = System.Math.Min(1d - avgFitness, 0.1d);
-            //_SwapPairMutate.MutationProbability = System.Math.Min(1d - avgFitness, 0.1d);
+            //_SwapMutate.MutationProbability = System.Math.Max(1d - avgFitness, 0.1d);
+            _SwapPairMutate.MutationProbability = System.Math.Max(1d - avgFitness, 0.1d);
             //_ReverseMutate.MutationProbability = 1d - avgFitness;
-            _Crossover.CrossoverProbability = System.Math.Max(avgFitness + 0.1d, 0.85d);
+            _Crossover.CrossoverProbability = System.Math.Max(avgFitness + 0.3d, 0.85d);
 
             PlotValue(avgFitness);
             //PlotValue(HighScore.GameScore.Total);

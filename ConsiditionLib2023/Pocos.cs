@@ -255,6 +255,8 @@ namespace ConsiditionLib2023
         {
             return $"Score total: {GameScore.Total}\n" +
                 $"CO2 Total: {GameScore.KgCo2Savings}\n" +
+                $"Earnings: {GameScore.Earnings}\n" +
+                $"Footfall: {GameScore.TotalFootfall}\n" +
                 $"Unprofitable locations: {Locations.Where(pair => !pair.Value.IsProfitable).Count()}\n" +
                 $"Non-saving CO2 locations: {Locations.Where(pair => !pair.Value.IsCo2Saving).Count()}";
         }
